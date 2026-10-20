@@ -1,0 +1,105 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Power BI TV Dashboard Rotation</title>
+  <style>
+    :root { color-scheme: dark; }
+    * { box-sizing: border-box; }
+    html, body { margin: 0; width: 100%; height: 100%; background: #111827; color: #f9fafb; font-family: Arial, sans-serif; overflow: hidden; }
+    #toolbar { height: 48px; display: flex; align-items: center; gap: 12px; padding: 0 14px; background: #111827; }
+    #dashboard-title { font-size: 15px; font-weight: 700; flex: 1; }
+    #status { font-size: 12px; color: #d1d5db; }
+    button { background: #2563eb; color: white; border: 0; border-radius: 5px; padding: 8px 12px; font-size: 13px; cursor: pointer; }
+    button.secondary { background: #374151; }
+    #frame-wrap { height: calc(100% - 48px); width: 100%; background: #fff; }
+    iframe { border: 0; width: 100%; height: 100%; display: block; background: white; }
+    body.fullscreen #toolbar { display: none; }
+    body.fullscreen #frame-wrap { height: 100%; }
+    #error-note { display: none; position: absolute; left: 12px; bottom: 12px; padding: 8px 10px; background: rgba(17,24,39,.88); color: white; font-size: 12px; border-radius: 5px; max-width: 90%; }
+  </style>
+</head>
+<body>
+  <div id="toolbar">
+    <div id="dashboard-title">Dashboard 1 of 2</div>
+    <div id="status">Switching every 15 seconds</div>
+    <button id="prev" class="secondary" type="button">Previous</button>
+    <button id="pause" class="secondary" type="button">Pause</button>
+    <button id="next" type="button">Next</button>
+    <button id="fullscreen" type="button">Full screen</button>
+  </div>
+  <div id="frame-wrap">
+    <iframe id="report" title="Power BI dashboard" allowfullscreen="true"
+      referrerpolicy="strict-origin-when-cross-origin"></iframe>
+  </div>
+  <div id="error-note">If the report does not load, check that this Power BI Publish to web link is still active and publicly accessible.</div>
+  <script>
+    // EDIT THIS LIST to add, remove, or rename dashboards.
+    const dashboards = [
+      {
+        name: "D-1",
+        url: "https://app.powerbi.com/view?r=eyJrIjoiOGZmYzU0N2MtMzAwYS00ZTNiLTliNjgtNWIwOTg0ZWI4YWIzIiwidCI6IjM2YWNjMjZmLTkzNDktNGM1Ni04OWQwLWM3Yzg2Y2RkZjE1YSJ9"
+      },
+      {
+        name: "D-2",
+        url: "https://app.powerbi.com/view?r=eyJrIjoiNmUzZGVlMTktNTdlZS00NDc0LThlYjItOTkyMzk3MjgxOTZjIiwidCI6IjM2YWNjMjZmLTkzNDktNGM1Ni04OWQwLWM3Yzg2Y2RkZjE1YSJ9"
+      }
+    ];
+
+    const ROTATION_SECONDS = 15; // Change this value if needed.
+    let current = 0;
+    let paused = false;
+    let secondsLeft = ROTATION_SECONDS;
+    const frame = document.getElementById("report");
+    const title = document.getElementById("dashboard-title");
+    const status = document.getElementById("status");
+    const pauseButton = document.getElementById("pause");
+    const errorNote = document.getElementById("error-note");
+
+    function showDashboard(index) {
+      current = (index + dashboards.length) % dashboards.length;
+      const item = dashboards[current];
+      title.textContent = `${item.name} (${current + 1} of ${dashboards.length})`;
+      frame.src = item.url;
+      secondsLeft = ROTATION_SECONDS;
+      errorNote.style.display = "none";
+    }
+    function updateStatus() {
+      status.textContent = paused ? "Rotation paused" : `Next dashboard in ${secondsLeft}s`;
+    }
+    document.getElementById("prev").addEventListener("click", () => showDashboard(current - 1));
+    document.getElementById("next").addEventListener("click", () => showDashboard(current + 1));
+    pauseButton.addEventListener("click", () => {
+      paused = !paused;
+      pauseButton.textContent = paused ? "Resume" : "Pause";
+      updateStatus();
+    });
+    document.getElementById("fullscreen").addEventListener("click", async () => {
+      try {
+        if (!document.fullscreenElement) {
+          await document.documentElement.requestFullscreen();
+          document.body.classList.add("fullscreen");
+        } else {
+          await document.exitFullscreen();
+          document.body.classList.remove("fullscreen");
+        }
+      } catch (e) {
+        status.textContent = "Use the TV browser's full-screen option if unavailable";
+      }
+    });
+    document.addEventListener("fullscreenchange", () => {
+      document.body.classList.toggle("fullscreen", Boolean(document.fullscreenElement));
+    });
+    setInterval(() => {
+      if (paused || dashboards.length < 2) return;
+      secondsLeft -= 1;
+      if (secondsLeft <= 0) showDashboard(current + 1);
+      else updateStatus();
+    }, 1000);
+    frame.addEventListener("load", () => { errorNote.style.display = "none"; });
+    showDashboard(0);
+    updateStatus();
+  </script>
+</body>
+</html>
