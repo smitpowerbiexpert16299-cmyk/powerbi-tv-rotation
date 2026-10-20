@@ -1,105 +1,86 @@
 <!doctype html>
 <html lang="en">
 <head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Power BI TV Dashboard Rotation</title>
-  <style>
-    :root { color-scheme: dark; }
-    * { box-sizing: border-box; }
-    html, body { margin: 0; width: 100%; height: 100%; background: #111827; color: #f9fafb; font-family: Arial, sans-serif; overflow: hidden; }
-    #toolbar { height: 48px; display: flex; align-items: center; gap: 12px; padding: 0 14px; background: #111827; }
-    #dashboard-title { font-size: 15px; font-weight: 700; flex: 1; }
-    #status { font-size: 12px; color: #d1d5db; }
-    button { background: #2563eb; color: white; border: 0; border-radius: 5px; padding: 8px 12px; font-size: 13px; cursor: pointer; }
-    button.secondary { background: #374151; }
-    #frame-wrap { height: calc(100% - 48px); width: 100%; background: #fff; }
-    iframe { border: 0; width: 100%; height: 100%; display: block; background: white; }
-    body.fullscreen #toolbar { display: none; }
-    body.fullscreen #frame-wrap { height: 100%; }
-    #error-note { display: none; position: absolute; left: 12px; bottom: 12px; padding: 8px 10px; background: rgba(17,24,39,.88); color: white; font-size: 12px; border-radius: 5px; max-width: 90%; }
-  </style>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Power BI TV Dashboard Rotator</title>
+<style>
+:root{color-scheme:dark;--bg:#0b1220;--panel:#111c2e;--line:#2b3a52;--text:#f3f6fb;--muted:#aebbd0;--accent:#2563eb}
+*{box-sizing:border-box}html,body{margin:0;width:100%;height:100%;font-family:Arial,sans-serif;background:var(--bg);color:var(--text);overflow:hidden}
+#topbar{height:46px;display:flex;align-items:center;gap:8px;padding:0 10px;background:#101827;border-bottom:1px solid var(--line)}
+#brand{font-size:14px;font-weight:700;white-space:nowrap}#current{color:var(--muted);font-size:12px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1}
+button,select,input{font:inherit}button{border:1px solid #3a4a63;background:#223149;color:var(--text);padding:7px 10px;border-radius:6px;cursor:pointer;white-space:nowrap}button.primary{background:var(--accent);border-color:var(--accent)}
+#stage{height:calc(100% - 46px);width:100%;position:relative;background:#fff;overflow:hidden}
+#frameScale{position:absolute;inset:0;overflow:hidden;background:#fff}
+#reportFrame{border:0;display:block;background:white;position:absolute;top:0;left:0;width:100%;height:100%;transform-origin:top left}
+#settings{position:fixed;z-index:10;right:10px;top:54px;width:min(560px,calc(100vw - 20px));max-height:calc(100vh - 64px);overflow:auto;background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:15px;box-shadow:0 12px 40px #0009;display:none}
+#settings.open{display:block}.head{display:flex;align-items:center;gap:10px}.head h2{font-size:17px;margin:0;flex:1}.muted{color:var(--muted);font-size:12px;line-height:1.45}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:9px}.field{display:flex;flex-direction:column;gap:5px;margin:9px 0}.field label{font-size:12px;color:var(--muted)}input,select{width:100%;min-width:0;background:#0b1220;color:var(--text);border:1px solid #3a4a63;border-radius:7px;padding:9px}
+hr{border:0;border-top:1px solid var(--line);margin:13px 0}.item{border:1px solid var(--line);border-radius:8px;padding:9px;margin:8px 0}.itemtop{display:flex;gap:8px;align-items:center}.itemtop strong{flex:1}.item .field{margin:7px 0}.actions{display:flex;flex-wrap:wrap;gap:8px;margin-top:11px}.status{font-size:12px;color:#b9c8dd;margin-top:8px}
+#helper{position:absolute;left:8px;bottom:8px;background:#101827d9;padding:6px 8px;border-radius:5px;font-size:11px;color:#fff;pointer-events:none}
+body.fullscreen #topbar{display:none}body.fullscreen #stage{height:100%}
+@media(max-width:650px){#brand{display:none}#current{font-size:11px}.grid{grid-template-columns:1fr}#topbar{gap:5px;padding:0 5px}button{padding:7px 7px;font-size:12px}}
+</style>
 </head>
 <body>
-  <div id="toolbar">
-    <div id="dashboard-title">Dashboard 1 of 2</div>
-    <div id="status">Switching every 15 seconds</div>
-    <button id="prev" class="secondary" type="button">Previous</button>
-    <button id="pause" class="secondary" type="button">Pause</button>
-    <button id="next" type="button">Next</button>
-    <button id="fullscreen" type="button">Full screen</button>
+<header id="topbar">
+  <div id="brand">TV Dashboard Rotation</div>
+  <div id="current">Loading dashboard…</div>
+  <button id="prev">◀</button><button id="pause">Pause</button><button id="next" class="primary">Next ▶</button>
+  <button id="openSettings">⚙ Settings</button><button id="full">Full screen</button>
+</header>
+<main id="stage">
+  <div id="frameScale"><iframe id="reportFrame" title="Power BI dashboard" allowfullscreen referrerpolicy="strict-origin-when-cross-origin"></iframe></div>
+  <div id="helper">⚙ Settings: change rotation, dashboard links and display scale</div>
+</main>
+<section id="settings" aria-label="Dashboard settings">
+  <div class="head"><h2>Slideshow & display settings</h2><button id="closeSettings">Close ✕</button></div>
+  <p class="muted">Display scale changes the rendered report size inside the TV viewport. If a report looks cropped, choose 90% or 80%. These settings are saved in this browser only.</p>
+  <div class="grid">
+    <div class="field"><label for="interval">Seconds per dashboard (5–3600)</label><input id="interval" type="number" min="5" max="3600" value="15"></div>
+    <div class="field"><label for="scale">Report display scale</label><select id="scale"><option value="70">70% — smaller</option><option value="80">80% — smaller</option><option value="90">90% — slightly smaller</option><option value="100">100% — normal</option><option value="110">110% — larger</option><option value="120">120% — larger</option></select></div>
+    <div class="field"><label for="fit">Power BI view preference</label><select id="fit"><option value="fitToWidth">Fit to width</option><option value="fitToPage">Fit to page</option><option value="actualSize">Actual size</option></select></div>
+    <div class="field"><label for="showHelper">Show helper message</label><select id="showHelper"><option value="yes">Yes</option><option value="no">No</option></select></div>
   </div>
-  <div id="frame-wrap">
-    <iframe id="report" title="Power BI dashboard" allowfullscreen="true"
-      referrerpolicy="strict-origin-when-cross-origin"></iframe>
-  </div>
-  <div id="error-note">If the report does not load, check that this Power BI Publish to web link is still active and publicly accessible.</div>
-  <script>
-    // EDIT THIS LIST to add, remove, or rename dashboards.
-    const dashboards = [
-      {
-        name: "D-1",
-        url: "https://app.powerbi.com/view?r=eyJrIjoiOGZmYzU0N2MtMzAwYS00ZTNiLTliNjgtNWIwOTg0ZWI4YWIzIiwidCI6IjM2YWNjMjZmLTkzNDktNGM1Ni04OWQwLWM3Yzg2Y2RkZjE1YSJ9"
-      },
-      {
-        name: "D-2",
-        url: "https://app.powerbi.com/view?r=eyJrIjoiNmUzZGVlMTktNTdlZS00NDc0LThlYjItOTkyMzk3MjgxOTZjIiwidCI6IjM2YWNjMjZmLTkzNDktNGM1Ni04OWQwLWM3Yzg2Y2RkZjE1YSJ9"
-      }
-    ];
-
-    const ROTATION_SECONDS = 15; // Change this value if needed.
-    let current = 0;
-    let paused = false;
-    let secondsLeft = ROTATION_SECONDS;
-    const frame = document.getElementById("report");
-    const title = document.getElementById("dashboard-title");
-    const status = document.getElementById("status");
-    const pauseButton = document.getElementById("pause");
-    const errorNote = document.getElementById("error-note");
-
-    function showDashboard(index) {
-      current = (index + dashboards.length) % dashboards.length;
-      const item = dashboards[current];
-      title.textContent = `${item.name} (${current + 1} of ${dashboards.length})`;
-      frame.src = item.url;
-      secondsLeft = ROTATION_SECONDS;
-      errorNote.style.display = "none";
-    }
-    function updateStatus() {
-      status.textContent = paused ? "Rotation paused" : `Next dashboard in ${secondsLeft}s`;
-    }
-    document.getElementById("prev").addEventListener("click", () => showDashboard(current - 1));
-    document.getElementById("next").addEventListener("click", () => showDashboard(current + 1));
-    pauseButton.addEventListener("click", () => {
-      paused = !paused;
-      pauseButton.textContent = paused ? "Resume" : "Pause";
-      updateStatus();
-    });
-    document.getElementById("fullscreen").addEventListener("click", async () => {
-      try {
-        if (!document.fullscreenElement) {
-          await document.documentElement.requestFullscreen();
-          document.body.classList.add("fullscreen");
-        } else {
-          await document.exitFullscreen();
-          document.body.classList.remove("fullscreen");
-        }
-      } catch (e) {
-        status.textContent = "Use the TV browser's full-screen option if unavailable";
-      }
-    });
-    document.addEventListener("fullscreenchange", () => {
-      document.body.classList.toggle("fullscreen", Boolean(document.fullscreenElement));
-    });
-    setInterval(() => {
-      if (paused || dashboards.length < 2) return;
-      secondsLeft -= 1;
-      if (secondsLeft <= 0) showDashboard(current + 1);
-      else updateStatus();
-    }, 1000);
-    frame.addEventListener("load", () => { errorNote.style.display = "none"; });
-    showDashboard(0);
-    updateStatus();
-  </script>
+  <p class="muted">Note: the view preference is appended as a Power BI URL parameter. Power BI may ignore it for some Publish to web reports. The scale control zooms the whole embedded view and may create margins or crop edges; use 80–100% first.</p>
+  <hr>
+  <div class="head"><h2>Dashboard list</h2><button id="add" class="primary">+ Add dashboard</button></div>
+  <div id="items"></div>
+  <div class="actions"><button id="save" class="primary">Save & apply</button><button id="reset">Reset D-1 / D-2</button><button id="export">Export settings</button><button id="import">Import settings</button></div>
+  <input id="importFile" type="file" accept="application/json" style="display:none">
+  <div id="status" class="status"></div>
+</section>
+<script>
+const DEFAULTS=[
+{name:"D-1",url:"https://app.powerbi.com/view?r=eyJrIjoiOGZmYzU0N2MtMzAwYS00ZTNiLTliNjgtNWIwOTg0ZWI4YWIzIiwidCI6IjM2YWNjMjZmLTkzNDktNGM1Ni04OWQwLWM3Yzg2Y2RkZjE1YSJ9"},
+{name:"D-2",url:"https://app.powerbi.com/view?r=eyJrIjoiNmUzZGVlMTktNTdlZS00NDc0LThlYjItOTkyMzk3MjgxOTZjIiwidCI6IjM2YWNjMjZmLTkzNDktNGM1Ni04OWQwLWM3Yzg2Y2RkZjE1YSJ9"}
+];
+const KEY="pbi-tv-rotator-settings-v3";
+function defaults(){return {dashboards:DEFAULTS.map(x=>({...x})),interval:15,scale:100,fit:"fitToWidth",showHelper:"yes"}}
+function load(){try{const x=JSON.parse(localStorage.getItem(KEY));if(x&&Array.isArray(x.dashboards)&&x.dashboards.length)return {...defaults(),...x}}catch(e){}return defaults()}
+let config=load(),current=0,paused=false,remaining=Number(config.interval)||15,timer=null;
+const $=id=>document.getElementById(id);
+function safeUrl(url){try{const u=new URL(url);return u.protocol==="https:"&&u.hostname==="app.powerbi.com"}catch(e){return false}}
+function makeUrl(url){try{const u=new URL(url);u.searchParams.set("pageView",config.fit||"fitToWidth");return u.toString()}catch(e){return url}}
+function applyScale(){const scale=(Number(config.scale)||100)/100;const f=$("reportFrame");f.style.width=(100/scale)+"%";f.style.height=(100/scale)+"%";f.style.transform=`scale(${scale})`; $("helper").style.display=config.showHelper==="no"?"none":"block"}
+function renderItems(){const box=$("items");box.innerHTML="";config.dashboards.forEach((d,i)=>{const el=document.createElement("div");el.className="item";el.innerHTML=`<div class="itemtop"><strong>Dashboard ${i+1}</strong><button type="button" data-remove="${i}">Remove</button></div><div class="field"><label>Dashboard name</label><input data-name="${i}" value=""></div><div class="field"><label>Power BI Publish to web URL</label><input data-url="${i}" value="" placeholder="https://app.powerbi.com/view?r=..."></div>`;el.querySelector(`[data-name="${i}"]`).value=d.name||"";el.querySelector(`[data-url="${i}"]`).value=d.url||"";box.appendChild(el)});box.querySelectorAll("[data-remove]").forEach(b=>b.onclick=()=>{if(config.dashboards.length<=1){setStatus("Keep at least one dashboard.");return}config.dashboards.splice(Number(b.dataset.remove),1);renderItems()})}
+function readForm(){config.interval=Math.max(5,Math.min(3600,Number($("interval").value)||15));config.scale=Number($("scale").value)||100;config.fit=$("fit").value;config.showHelper=$("showHelper").value;const items=[...$("items").querySelectorAll(".item")];const next=[];for(let i=0;i<items.length;i++){const name=items[i].querySelector(`[data-name="${i}"]`).value.trim()||`Dashboard ${i+1}`;const url=items[i].querySelector(`[data-url="${i}"]`).value.trim();if(!url){setStatus(`Enter a URL for ${name}.`);return false}if(!safeUrl(url)){setStatus(`The URL for ${name} must be a valid https://app.powerbi.com link.`);return false}next.push({name,url})}config.dashboards=next;return true}
+function setStatus(s){$("status").textContent=s}
+function show(i){current=(i+config.dashboards.length)%config.dashboards.length;const d=config.dashboards[current];$("current").textContent=`${d.name} (${current+1} of ${config.dashboards.length})`; $("reportFrame").src=makeUrl(d.url);remaining=config.interval;updateStatus()}
+function updateStatus(){$("pause").textContent=paused?"Resume": "Pause";if(!paused)$("current").textContent=`${config.dashboards[current].name} (${current+1} of ${config.dashboards.length}) · next in ${remaining}s`}
+function saveApply(){if(!readForm())return;localStorage.setItem(KEY,JSON.stringify(config));applyScale();show(0);setStatus("Saved in this browser and applied. Reopen this page in the same browser to reuse these settings.");}
+$("openSettings").onclick=()=>{$("settings").classList.toggle("open")};$("closeSettings").onclick=()=>$("settings").classList.remove("open");
+$("prev").onclick=()=>show(current-1);$("next").onclick=()=>show(current+1);$("pause").onclick=()=>{paused=!paused;updateStatus()};
+$("full").onclick=async()=>{try{if(!document.fullscreenElement)await document.documentElement.requestFullscreen();else await document.exitFullscreen()}catch(e){setStatus("Use the TV browser's own full-screen command.")}};
+document.addEventListener("fullscreenchange",()=>document.body.classList.toggle("fullscreen",!!document.fullscreenElement));
+$("add").onclick=()=>{config.dashboards.push({name:`Dashboard ${config.dashboards.length+1}`,url:""});renderItems()};
+$("save").onclick=saveApply;
+$("reset").onclick=()=>{config=defaults();$("interval").value=config.interval;$("scale").value=String(config.scale);$("fit").value=config.fit;$("showHelper").value=config.showHelper;renderItems();saveApply()};
+$("export").onclick=()=>{if(!readForm())return;const blob=new Blob([JSON.stringify(config,null,2)],{type:"application/json"});const a=document.createElement("a");a.href=URL.createObjectURL(blob);a.download="powerbi-tv-settings.json";a.click();URL.revokeObjectURL(a.href);setStatus("Settings exported as JSON.")};
+$("import").onclick=()=>$("importFile").click();
+$("importFile").onchange=async e=>{try{const f=e.target.files[0];if(!f)return;const x=JSON.parse(await f.text());if(!x||!Array.isArray(x.dashboards)||!x.dashboards.length)throw Error();config={...defaults(),...x};$("interval").value=config.interval;$("scale").value=String(config.scale);$("fit").value=config.fit;$("showHelper").value=config.showHelper;renderItems();setStatus("Imported. Click Save & apply to activate.")}catch(e){setStatus("Could not import that settings file.")}e.target.value=""};
+$("interval").value=config.interval;$("scale").value=String(config.scale);$("fit").value=config.fit;$("showHelper").value=config.showHelper;renderItems();applyScale();show(0);
+timer=setInterval(()=>{if(paused||config.dashboards.length<2)return;remaining--;if(remaining<=0)show(current+1);else updateStatus()},1000);
+</script>
 </body>
 </html>
